@@ -7,8 +7,8 @@ from PIL import Image
 from app.object_detection import label_map_util
 # from app.object_detection import visualization_utils as vis_util
 import logging
-from pathlib import Path
 import click
+from pathlib import Path
 
 
 root = Path(__file__).parent

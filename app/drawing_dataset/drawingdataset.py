@@ -6,7 +6,6 @@ import jsonlines
 import logging
 import click
 
-
 class DrawingDataset(object):
     """
     interface to the drawing dataset

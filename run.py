@@ -1,5 +1,4 @@
 from __future__ import division
-import click
 from app.workflow import Workflow
 from app.drawing_dataset import DrawingDataset
 from app.image_processor import ImageProcessor, tensorflow_model_name, model_path
@@ -32,15 +31,16 @@ def run():
     app.setup()
 
     while True:
-        #app.capture(str(path))
-        path = Path(input("enter the filepath of the image to process: "))
+
+        #path = Path(input("enter the filepath of the image to process: "))
+        path = "test.jpg"
         
-        if str(path) not in ['.', 'exit']:
-            app.process(str(path), top_x=10)
-            app.save_results()
-        else:
-            app.close()
-            sys.exit()
+        #if str(path) not in ['.', 'exit']:
+        app.process(str(path), top_x=10)
+        app.save_results()
+        #else:
+        app.close()
+        sys.exit()
 
 if __name__=='__main__':
     run()
