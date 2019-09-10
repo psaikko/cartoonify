@@ -1,10 +1,10 @@
 .ipynb_checkpoints
 __pycache__
-cartoonify/logs/*
-cartoonify/cartoonify.egg-info
-cartoonify/downloads/drawing_dataset/*.bin
-cartoonify/downloads/detection_models
-cartoonify/images
+logs/*
+downloads/drawing_dataset/*.bin
+downloads/detection_models
+images
 .idea
+.vscode
 venv
 *.pyc

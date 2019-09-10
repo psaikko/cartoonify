@@ -1,1 +1,0 @@
-from .sketchgizeh import SketchGizeh
