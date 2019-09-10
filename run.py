@@ -10,6 +10,7 @@ import datetime
 import importlib
 import sys
 import time
+import cv2
 
 root = Path(__file__).parent
 
@@ -27,20 +28,20 @@ if not logging_path.exists():
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG, filename=str(Path(__file__).parent / 'logs' / logging_filename))
 
 def run():
-    app = Workflow(dataset, imageprocessor, None)
+    app = Workflow(dataset, imageprocessor)
     app.setup()
 
-    while True:
+    #path = Path(input("enter the filepath of the image to process: "))
+    path = "tmp.jpg"
+    app.capture(path)
+    
+    start = time.time()
+    app.process(str(path), top_x=10)
+    print("processed in %f seconds" % (time.time()-start))
 
-        #path = Path(input("enter the filepath of the image to process: "))
-        path = "test.jpg"
-        
-        #if str(path) not in ['.', 'exit']:
-        app.process(str(path), top_x=10)
-        app.save_results()
-        #else:
-        app.close()
-        sys.exit()
+    app.save_results(debug=True)
+    
+    app.close()
 
 if __name__=='__main__':
     run()

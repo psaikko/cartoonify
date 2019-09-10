@@ -70,13 +70,13 @@ class ImageProcessor(object):
         """
         if not Path(path).exists():
             raise IOError('model file missing: {}'.format(str(path)))
-        with tf.gfile.GFile(path, 'rb') as fid:
-            graph_def = tf.GraphDef()
+        with tf.io.gfile.GFile(path, 'rb') as fid:
+            graph_def = tf.compat.v1.GraphDef()
             graph_def.ParseFromString(fid.read())
         with tf.Graph().as_default() as graph:
             tf.import_graph_def(graph_def, name='')
         self._detection_graph = graph
-        self._session = tf.Session(graph=self._detection_graph)
+        self._session = tf.compat.v1.Session(graph=self._detection_graph)
         # Definite input and output Tensors for detection_graph
         self.image_tensor = self._detection_graph.get_tensor_by_name('image_tensor:0')
         # Each box represents a part of the image where a particular object was detected.

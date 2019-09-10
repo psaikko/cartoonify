@@ -6,19 +6,18 @@ import logging
 from app.sketch import SketchGizeh
 import subprocess
 from csv import writer
-
+import cv2
 
 class Workflow(object):
     """controls execution of app
     """
 
-    def __init__(self, dataset, imageprocessor, camera):
+    def __init__(self, dataset, imageprocessor):
         self._path = Path('')
         self._image_path = Path('')
         self._dataset = dataset
         self._image_processor = imageprocessor
         self._sketcher = None
-        self._cam = camera
         self._logger = logging.getLogger(self.__class__.__name__)
         self._image = None
         self._annotated_image = None
@@ -41,8 +40,6 @@ class Workflow(object):
         if not self._path.exists():
             self._path.mkdir()
         self.count = len(list(self._path.glob('image*.jpg')))
-        if self._cam is not None:
-            self._cam.resolution = (640, 480)
         self._logger.info('setup finished.')
 
     def run(self, print_cartoon=False):
@@ -63,11 +60,12 @@ class Workflow(object):
             self._logger.exception(e)
 
     def capture(self, path):
-        if self._cam is not None:
-            self._logger.info('capturing image')
-            self._cam.capture(str(path))
-        else:
-            raise AttributeError("app wasn't started with --camera flag, so you can't use the camera to capture images.")
+        self._logger.info('capturing image')
+        cap = cv2.VideoCapture(0)
+        ret, frame = cap.read()
+        cv2.imwrite(str(path), frame)
+        cap.release()
+
         return path
 
     def process(self, image_path, threshold=0.3, top_x=None):
@@ -118,7 +116,7 @@ class Workflow(object):
             f.writelines(self.image_labels)
         if debug:
             scores_path = self._image_path.with_name('scores' + str(self.count) + '.txt')
-            with open(str(scores_path), 'w', newline='') as f:
+            with open(str(scores_path), 'w') as f:
                 fcsv = writer(f)
                 fcsv.writerow(map(str, self._scores.flatten()))
         # self._save_3d_numpy_array_as_png(self._annotated_image, annotated_path)
