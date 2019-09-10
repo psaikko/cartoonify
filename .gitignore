@@ -7,3 +7,4 @@ cartoonify/downloads/detection_models
 cartoonify/images
 .idea
 venv
+*.pyc
