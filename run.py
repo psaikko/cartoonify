@@ -31,15 +31,15 @@ def run():
     app = Workflow(dataset, imageprocessor)
     app.setup()
 
-    #path = Path(input("enter the filepath of the image to process: "))
-    path = "tmp.jpg"
-    app.capture(path)
-    
-    start = time.time()
-    app.process(str(path), top_x=10)
-    print("processed in %f seconds" % (time.time()-start))
+    while True:
+        
+        app.process(debug=True)
 
-    app.save_results(debug=True)
+        sketch, annotated = app.get_npimages()
+
+        cv2.imshow('frame', sketch)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
     
     app.close()
 

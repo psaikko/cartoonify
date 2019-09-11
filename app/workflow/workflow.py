@@ -7,6 +7,7 @@ from app.sketch import SketchGizeh
 import subprocess
 from csv import writer
 import cv2
+import time
 
 class Workflow(object):
     """controls execution of app
@@ -68,36 +69,69 @@ class Workflow(object):
 
         return path
 
-    def process(self, image_path, threshold=0.3, top_x=None):
-        """processes an image. If no path supplied, then capture from camera
+    def process(self, image_path=None, threshold=0.3, top_x=None, debug=False):
+        """processes an image. 
 
+        :param image_path: image to process
         :param top_x: If not none, only the top X results are drawn (overrides threshold)
         :param float threshold: threshold for object detection (0.0 to 1.0)
         :param path: directory to save results to
-        :param bool camera_enabled: whether to use raspi camera or not
-        :param image_path: image to process, if camera is disabled
+        
         :return:
         """
         self._logger.info('processing image...')
         try:
-            self._image_path = Path(image_path)
-            img = self._image_processor.load_image_into_numpy_array(image_path)
-            # load a scaled version of the image into memory
-            img_scaled = self._image_processor.load_image_into_numpy_array(image_path, scale=300 / max(img.shape))
+            if not image_path:
+                cap = cv2.VideoCapture(0)
+                ret, img = cap.read()
+                #cv2.imwrite(str(path), frame)
+                cap.release()
+                img_scaled = cv2.resize(img, (0,0), fx=300 / max(img.shape), fy=300 / max(img.shape)) 
+            else:
+                self._image_path = Path(image_path)
+                img = self._image_processor.load_image_into_numpy_array(image_path)
+                # load a scaled version of the image into memory
+                img_scaled = self._image_processor.load_image_into_numpy_array(image_path, scale=300 / max(img.shape))
+            
+            # detect objects
+            process_time = time.time()
             self._boxes, self._scores, self._classes, num = self._image_processor.detect(img_scaled)
+            process_time = time.time() - process_time
+
             # annotate the original image
+            annotate_time = time.time()
             self._annotated_image = self._image_processor.annotate_image(img, self._boxes, self._classes, self._scores, threshold=threshold)
+            annotate_time = time.time() - annotate_time
+
             self._sketcher = SketchGizeh()
             self._sketcher.setup(img.shape[1], img.shape[0])
+
             if top_x:
                 sorted_scores = sorted(self._scores.flatten())
                 threshold = sorted_scores[-min([top_x, self._scores.size])]
+
+            if debug:
+                scores_classes = [(self._image_processor.labels[i]["name"], score) 
+                                for (i, score) in zip(np.squeeze(self._classes),np.squeeze(self._scores))]
+                print("Top 10:")
+                for i in range(10):
+                    print(scores_classes[i]) 
+
+            draw_time = time.time()
             self._image_labels = self._sketcher.draw_object_recognition_results(np.squeeze(self._boxes),
                                    np.squeeze(self._classes).astype(np.int32),
                                    np.squeeze(self._scores),
                                    self._image_processor.labels,
                                    self._dataset,
                                    threshold=threshold)
+            draw_time = time.time() - draw_time
+
+            if debug:
+                print("Detecting %.2fs" % process_time)
+                print("Annotating %.2fs" % annotate_time)
+                print("Drawing %.2fs" % draw_time)
+                print("Accepted", self._image_labels)
+
         except (ValueError, IOError) as e:
             self._logger.exception(e)
 
@@ -122,6 +156,9 @@ class Workflow(object):
         # self._save_3d_numpy_array_as_png(self._annotated_image, annotated_path)
         self._sketcher.save_png(cartoon_path)
         return annotated_path, cartoon_path
+
+    def get_npimages(self):
+        return self._sketcher.get_npimage(), self._annotated_image
 
     def _save_3d_numpy_array_as_png(self, img, path):
         """saves a NxNx3 8 bit numpy array as a png image
