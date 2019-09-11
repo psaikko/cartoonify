@@ -2,7 +2,7 @@ tensorflow==1.14.0
 jsonlines
 numpy<1.17
 click
-opencv-python==4.1.1
+opencv-python
 testpath
 cairocffi
 cffi
