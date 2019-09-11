@@ -3,6 +3,7 @@ jsonlines
 numpy<1.17
 click
 opencv-python
+matplotlib
 testpath
 cairocffi
 cffi
