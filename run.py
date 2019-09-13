@@ -11,6 +11,7 @@ import importlib
 import sys
 import time
 import cv2
+import click 
 
 root = Path(__file__).parent
 
@@ -27,20 +28,39 @@ if not logging_path.exists():
     logging_path.mkdir()
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG, filename=str(Path(__file__).parent / 'logs' / logging_filename))
 
-def run():
+@click.command()
+@click.option("--device", default=0, help="Device id of video camera")
+@click.option("--ifile", default=None, help="Input file, uses camera if not specified")
+@click.option("--ofile", default=None, help="Output file, displays window if not specified")
+@click.option("--interval", default=1, help="In camera mode, time between frames")
+def run(device,ifile,ofile,interval):
     app = Workflow(dataset, imageprocessor)
     app.setup()
 
     while True:
-        
-        app.process(debug=True)
+        if ifile != None:
+            frame = app.read(ifile)
+        else: # camera
+            frame = app.capture(device)
 
+        app.process(frame, threshold=0.37)
         sketch, annotated = app.get_npimages()
 
-        cv2.imshow('frame', sketch)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-    
+        if ofile != None:
+            app.save_results(ofile)
+            if ifile != None:
+                break
+            else: # camera
+                time.sleep(interval)
+        else: # window
+            cv2.imshow('frame', sketch)
+            if ifile != None:
+                cv2.waitKey(0)
+                break
+            else: # camera
+                if cv2.waitKey(interval*1000) & 0xFF == ord('q'): break
+                time.sleep(interval)
+
     app.close()
 
 if __name__=='__main__':

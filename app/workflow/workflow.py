@@ -8,6 +8,7 @@ import subprocess
 from csv import writer
 import cv2
 import time
+import os
 
 class Workflow(object):
     """controls execution of app
@@ -43,33 +44,21 @@ class Workflow(object):
         self.count = len(list(self._path.glob('image*.jpg')))
         self._logger.info('setup finished.')
 
-    def run(self, print_cartoon=False):
-        """capture an image, process it, save to file, and optionally print it
+    def capture(self, device):
+        self._image_path = Path(os.getcwd()) / "placeholder"
 
-        :return:
-        """
-        try:
-            self._logger.info('capturing and processing image.')
-            self.count += 1
-            path = self._path / ('image' + str(self.count) + '.jpg')
-            self.capture(path)
-            self.process(path, top_x=3)
-            annotated, cartoon = self.save_results()
-            if print_cartoon:
-                subprocess.call(['lp', '-o', 'landscape', '-c', str(cartoon)])
-        except Exception as e:
-            self._logger.exception(e)
-
-    def capture(self, path):
         self._logger.info('capturing image')
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(device)
         ret, frame = cap.read()
-        cv2.imwrite(str(path), frame)
         cap.release()
 
-        return path
+        return frame
 
-    def process(self, image_path=None, threshold=0.3, top_x=None, debug=False):
+    def read(self, path):
+        self._image_path = Path(path)
+        return self._image_processor.load_image_into_numpy_array(path)
+
+    def process(self, img, threshold=0.3, top_x=None, debug=False):
         """processes an image. 
 
         :param image_path: image to process
@@ -81,17 +70,7 @@ class Workflow(object):
         """
         self._logger.info('processing image...')
         try:
-            if not image_path:
-                cap = cv2.VideoCapture(0)
-                ret, img = cap.read()
-                #cv2.imwrite(str(path), frame)
-                cap.release()
-                img_scaled = cv2.resize(img, (0,0), fx=300 / max(img.shape), fy=300 / max(img.shape)) 
-            else:
-                self._image_path = Path(image_path)
-                img = self._image_processor.load_image_into_numpy_array(image_path)
-                # load a scaled version of the image into memory
-                img_scaled = self._image_processor.load_image_into_numpy_array(image_path, scale=300 / max(img.shape))
+            img_scaled = cv2.resize(img, (0,0), fx=300 / max(img.shape), fy=300 / max(img.shape))                 
             
             # detect objects
             process_time = time.time()
@@ -135,27 +114,28 @@ class Workflow(object):
         except (ValueError, IOError) as e:
             self._logger.exception(e)
 
-    def save_results(self, debug=False):
+    def save_results(self, name, debug=False):
         """save result images as png and list of detected objects as txt
         if debug is true, save a list of all detected objects and their scores
 
         :return tuple: (path to annotated image, path to cartoon image)
         """
-        self._logger.info('saving results...')
-        annotated_path = self._image_path
-        cartoon_path = self._image_path.with_name('cartoon' + str(self.count) + '.png')
-        labels_path = self._image_path.with_name('labels' + str(self.count) + '.txt')
+        self._logger.info('saving results...')            
+        cartoon_path = self._image_path.with_name(name)
+        self._sketcher.save_png(cartoon_path)
 
-        with open(str(labels_path), 'w') as f:
-            f.writelines(self.image_labels)
         if debug:
+            labels_path = self._image_path.with_name('labels' + str(self.count) + '.txt')
+            with open(str(labels_path), 'w') as f:
+                f.writelines(self.image_labels)
             scores_path = self._image_path.with_name('scores' + str(self.count) + '.txt')
             with open(str(scores_path), 'w') as f:
                 fcsv = writer(f)
                 fcsv.writerow(map(str, self._scores.flatten()))
-        # self._save_3d_numpy_array_as_png(self._annotated_image, annotated_path)
-        self._sketcher.save_png(cartoon_path)
-        return annotated_path, cartoon_path
+            annotated_path = self._image_path.with_name('annotated.png')
+            self._save_3d_numpy_array_as_png(self._annotated_image, annotated_path)
+        
+        return cartoon_path
 
     def get_npimages(self):
         return self._sketcher.get_npimage(), self._annotated_image
